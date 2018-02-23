@@ -1,5 +1,5 @@
 ---
-layout: post
+layout: default
 title: "I am writing my first blog post"
 date: 2018-02-17
 ---

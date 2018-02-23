@@ -1,20 +1,16 @@
 ---
-layout: posts
+layout: default
 title: Docker networks
 ---
 # Docker networks
 
 Docker has several options for connecting containers to the network.
 
-The default is **bridge**. The container is connected to a Linuxbridge named docker0 via a veth pair.
-
-**host**: Connects the container directly to the host's network.
-
-**overlay**: Allows networks that span container hosts.
-
-**macvlan**: Generates a unique MAC address for the container; useful for porting applications that expect direct connection to a physical network.
-
-**none**: The container is not connected to the network at all.
+- The default is **bridge**. The container is connected to a Linuxbridge named docker0 via a veth pair.
+- **host**: Connects the container directly to the host's network.
+- **overlay**: Allows networks that span container hosts.
+- **macvlan**: Generates a unique MAC address for the container; useful for porting applications that expect direct connection to a physical network.
+- **none**: The container is not connected to the network at all.
 
 ## Exploring Docker's default network
 
@@ -22,14 +18,14 @@ See also the network tutorial on the Docker documentation site.
 
 Docker creates a Linuxbridge named docker0, to which containers are connected by default. Let's start two containers and explore their network connections:
 
-<pre><code>
+{% highlight shell %}
 $ docker run -dit --name alpine1 alpine ash
 $ docker run -dit --name alpine2 alpine ash
-</code></pre>
+{% endhighlight %}
 
 List the networks on the host:
 
-<pre><code>
+{% highlight shell %}
 $ brctl show
 bridge name     bridge id               STP enabled     interfaces
 docker0         8000.0242991b7644       no              veth3220a8b
@@ -50,12 +46,13 @@ $ ip a
     link/ether 7e:87:30:44:be:ca brd ff:ff:ff:ff:ff:ff link-netnsid 1
     inet6 fe80::7c87:30ff:fe44:beca/64 scope link
        valid_lft forever preferred_lft forever
-</code></pre>
+{% endhighlight %}
+
 
 Docker has created two veth interfaces, one per container, that are plugged into docker0. 
 veth interfaces come in pairs. In the above example, the other end of each pair is, respectively, interface 10 and 12. The ip command can't display the other ends because they reside in their own network namespaces. They are visible in the containers:
 
-<pre><code>
+{% highlight shell %}
 $ docker attach alpine1
 / # ip a
 ...
@@ -63,21 +60,23 @@ $ docker attach alpine1
     link/ether 02:42:ac:11:00:02 brd ff:ff:ff:ff:ff:ff
     inet 172.17.0.2/16 brd 172.17.255.255 scope global eth0
        valid_lft forever preferred_lft forever
-</code></pre>
+{% endhighlight %}
+
 
 This is interface 10, the partner of interface 11 (also known as veth44e00db) on the host.
 
 The docker network inspect command displays detailed information about the current network setup:
 
-<pre><code>
+{% highlight shell %}
 $ docker network ls
 NETWORK ID          NAME                DRIVER              SCOPE
 b69732400cfd        bridge              bridge              local
 edd08488095e        host                host                local
 fccec8d809d7        none                null                local
-</code></pre>
+{% endhighlight %}
+
 Docker has set up three networks: Bridge, host and none. We are interested in the bridge network.
-<pre><code>
+{% highlight shell %}
 $ docker network inspect bridge
 [
     {
@@ -97,9 +96,10 @@ $ docker network inspect bridge
                 }
             ]
         },
-</code></pre>
+{% endhighlight %}
+
 This shows us subnet and gateway of the bridge network.
-<pre><code>
+{% highlight shell %}
         "Internal": false,
         "Attachable": false,
         "Ingress": false,
@@ -123,10 +123,11 @@ This shows us subnet and gateway of the bridge network.
                 "IPv6Address": ""
             }
         },
-</code></pre>
+{% endhighlight %}
+
 Two containers are currently plugged into the bridge. Docker reports their addresses, which can be 
 compared with (and should be identical to) the IP addresses reported inside the containers.
-<pre><code>
+{% highlight shell %}
         "Options": {
             "com.docker.network.bridge.default_bridge": "true",
             "com.docker.network.bridge.enable_icc": "true",
@@ -138,13 +139,14 @@ compared with (and should be identical to) the IP addresses reported inside the 
         "Labels": {}
     }
 ]
-</code></pre>
+{% endhighlight %}
+
 
 ## Exploring a user-defined bridge network
 
 To create another bridge network:
 
-<pre><code>
+{% highlight shell %}
 $ docker network create --driver bridge alpine-net
 $ docker network ls
 NETWORK ID          NAME                DRIVER              SCOPE
@@ -173,36 +175,40 @@ $ docker network inspect alpine-net
         },
      ...
 ]
-</code></pre>
+{% endhighlight %}
+
 
 Subnet and gateway addresses differ from the addresses in the *bridge* network.
 
-<pre><code>
+{% highlight shell %}
 $ brctl show
 bridge name     bridge id               STP enabled     interfaces
 br-d2afe0681bab         8000.02424d9bd9b3       no
 docker0         8000.0242022630ae       no              veth108e2d2
                                                         veth8812dfc
 virbr0          8000.52540050a64e       yes             virbr0-nic
-</code></pre>
+{% endhighlight %}
+
 
 The new network is implemented by another Linuxbridge, whose name is derived from the ID of alpine-net.
 
 To connect a container to the new network, use the --network option, for example:
 
-<pre><code>
+{% highlight shell %}
 $ docker run -dit --name alpine3 --network alpine-net alpine ssh
-</code></pre>
+{% endhighlight %}
+
 
 Or connect a running container:
 
-<pre><code>
+{% highlight shell %}
 $ docker network connect alpine-net alpine2
-</code></pre>
+{% endhighlight %}
+
 
 This adds alpine-net to alpine2, which is now connected to two networks:
 
-<pre><code>
+{% highlight shell %}
 $ docker attach alpine2
 / # ip a
 ...
@@ -214,7 +220,8 @@ $ docker attach alpine2
     link/ether 02:42:ac:12:00:02 brd ff:ff:ff:ff:ff:ff
     inet 172.18.0.2/16 brd 172.18.255.255 scope global eth1
        valid_lft forever preferred_lft forever
-</code></pre>
+{% endhighlight %}
+
 
 ### Automatic service discovery on user-defined networks
 
@@ -222,7 +229,7 @@ On user-defined networks, container can use the names of other containers for co
 The alpine2 container is connected to both networks *bridge* and *alpine-net*. 
 It has connectivity to alpine1 on *bridge*, but only when using its IP address 172.17.0.2. 
 
-<pre><code>
+{% highlight shell %}
 / # ping 172.17.0.2 -c3
 PING 172.17.0.2 (172.17.0.2): 56 data bytes
 64 bytes from 172.17.0.2: seq=0 ttl=64 time=0.286 ms
@@ -234,12 +241,13 @@ PING 172.17.0.2 (172.17.0.2): 56 data bytes
 round-trip min/avg/max = 0.180/0.247/0.286 ms
 / # ping alpine1
 ping: bad address 'alpine1'
-</code></pre>
+{% endhighlight %}
+
 
 On the other hand,
 alpine3, which is connected to user-defined *alpine-net*, can be reached by name:
 
-<pre><code>
+{% highlight shell %}
 / # ping alpine3 -c3
 PING alpine3 (172.18.0.3): 56 data bytes
 64 bytes from 172.18.0.3: seq=0 ttl=64 time=0.219 ms
@@ -249,7 +257,8 @@ PING alpine3 (172.18.0.3): 56 data bytes
 --- alpine3 ping statistics ---
 3 packets transmitted, 3 packets received, 0% packet loss
 round-trip min/avg/max = 0.163/0.193/0.219 ms
-</code></pre>
+{% endhighlight %}
+
 
 ## Host network
 
@@ -258,13 +267,14 @@ A container connected to a host network is not isolated from a networking point 
 As an example, run a web server in a container connected to the host network, 
 and inspect the network configuration on the host.
 
-<pre><code>
+{% highlight shell %}
 $ docker run --rm -dit --network host --name webserver nginx
 $ sudo ss -tlnp |grep 80
 LISTEN     0      128    *:80      *:*    users:(("nginx",pid=2421,fd=6),("nginx",pid=2404,fd=6))
 $ ip a
 $ brctl show
-</code></pre>
+{% endhighlight %}
+
 
 The contained nginx process is simply connected to the network. No network namespace is used. 
 No additional network interface or bridge has been created.

@@ -1,5 +1,5 @@
 ---
-layout: post
+layout: default
 title: "Starting with Linux Containers"
 date: 2018-02-18
 ---
