@@ -262,14 +262,16 @@ round-trip min/avg/max = 0.163/0.193/0.219 ms
 
 ## Host network
 
-A container connected to a host network is not isolated from a networking point of view, but continues to enjoy isolation regarding all other namespaces.
+A container connected to a host network doesn't have a network namespace. It uses the network resources from the host.
 
 As an example, run a web server in a container connected to the host network, 
 and inspect the network configuration on the host.
 
 {% highlight shell %}
 $ docker run --rm -dit --network host --name webserver nginx
-$ sudo ss -tlnp |grep 80
+$ docker inspect --format '{{ .State.Pid }}' webserver
+1614
+$ sudo ss -tlnp |grep 1614
 LISTEN     0      128    *:80      *:*    users:(("nginx",pid=2421,fd=6),("nginx",pid=2404,fd=6))
 $ ip a
 $ brctl show
